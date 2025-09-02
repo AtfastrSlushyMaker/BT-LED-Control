@@ -1,0 +1,9 @@
+# Core dependencies for BLE communication
+bleak>=0.21.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+
+# Optional: for better logging and debugging
+colorama>=0.4.6
