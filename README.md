@@ -144,14 +144,15 @@ asyncio.run(color_cycle())
 ```
 BT-LED-Control/
 ├── bt_led_control/          # Main package
-│   ├── __init__.py
+│   ├── __init__.py         # Package initialization & exports
 │   ├── bluetooth.py         # BLE connection management
 │   ├── commands.py          # LED command protocols
 │   ├── device.py           # High-level device interface
 │   └── utils.py            # Utility functions
 ├── led_menu.py             # Interactive control menu
-├── requirements.txt        # Dependencies
-└── README.md              # This file
+├── requirements.txt        # Project dependencies
+├── .gitignore             # Git ignore rules
+└── README.md              # Project documentation
 ```
 
 ---
