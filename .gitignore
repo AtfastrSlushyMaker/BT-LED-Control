@@ -197,5 +197,11 @@ $RECYCLE.BIN/
 # Add any project-specific files to ignore here
 test_*.py
 *_test.py
-debug.py
+debug*.py
 temp.py
+search_*.py
+monitor_*.png
+test_*.png
+debug_*.png
+4k_*.png
+search_*.png
