@@ -137,7 +137,7 @@ Use the interactive menu for the easiest setup:
 python led_menu.py
 # Select option 11 for 120 FPS ambient lighting
 # Select option 12 for ultra-smooth unlimited FPS mode
-# Press 'Q' to exit ambient lighting
+# Press 'Ctrl+/' to exit ambient lighting
 ```
 
 ### API Usage
@@ -165,7 +165,7 @@ asyncio.run(ambient_lighting())
 
 - **🚀 High Performance**: 120+ FPS for ultra-smooth color transitions
 - **🎨 Smart Color Enhancement**: Intelligently boosts washed-out colors while preserving natural mixes
-- **🖱️ Easy Control**: Press 'Q' key to exit ambient mode
+- **🖱️ Easy Control**: Press 'Ctrl+/' key to exit ambient mode
 - **⚡ Optimized Capture**: Fast screen sampling with edge detection for better color accuracy
 - **🎯 Color Accuracy**: Special handling for whites, cyans, yellows, and magentas
 
@@ -265,7 +265,7 @@ async def smart_ambient_lighting():
     
     if await lamp.connect():
         print("🚀 Starting ambient lighting!")
-        print("Press 'Q' to exit")
+        print("Press 'Ctrl+/' to exit")
         
         # Start high-performance ambient lighting
         await lamp.start_ambient_lighting(fps=120)
@@ -366,7 +366,7 @@ This project is open source. Feel free to use, modify, and distribute.
    - Single-color dominance is enhanced for vivid lighting
 
 4. **Exit ambient lighting:**
-   - Press the 'Q' key to gracefully exit ambient mode
+   - Press 'Ctrl+/' (Ctrl + forward slash) to gracefully exit ambient mode
    - The LED will retain the last color displayed
 
 ---
