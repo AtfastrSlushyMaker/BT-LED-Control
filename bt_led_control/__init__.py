@@ -13,6 +13,11 @@ __description__ = "Control Magic Lantern LED lights via Bluetooth Low Energy"
 from .device import LT22Lamp
 from .bluetooth import BLEManager
 from .commands import rgb_command, red, green, blue, white, off
+from .screen_capture import (
+    ScreenColorCapture,
+    get_screen_average_color,
+    get_screen_edge_color,
+)
 
 # Define what gets imported with "from bt_led_control import *"
 __all__ = [
@@ -24,4 +29,7 @@ __all__ = [
     "blue",
     "white",
     "off",
+    "ScreenColorCapture",
+    "get_screen_average_color",
+    "get_screen_edge_color",
 ]

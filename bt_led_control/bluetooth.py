@@ -14,7 +14,7 @@ class BLEManager:
         self.client: Optional[BleakClient] = None
 
     async def scan_for_devices(
-        self, timeout: float = 5.0, display: bool = False
+        self, timeout: float = 1.0, display: bool = False
     ) -> List[BLEDevice]:
         """Scan for nearby BLE devices."""
         devices = await BleakScanner.discover(timeout=timeout)

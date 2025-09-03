@@ -39,8 +39,12 @@ class LEDMenu:
             print("9. Yellow")
             print("10. Cyan")
 
+            print("\n✨ Special Effects:")
+            print("11. Ambient Screen Lighting")
+            print("12. Ultra-Smooth Ambient Lighting")
+
             print("\n⚙️ Connection:")
-            print("11. Disconnect")
+            print("13. Disconnect")
             print("0. Exit")
 
         print("-" * 50)
@@ -148,6 +152,18 @@ class LEDMenu:
                 print("✅ Done!")
 
             elif choice == "11":
+                print("✨ Starting Ambient Screen Lighting...")
+                print("This will make your LED match your screen colors!")
+                print("Tip: Play a colorful video or game to see the effect")
+                await self.lamp.start_ambient_lighting()
+
+            elif choice == "12":
+                print("🚀 Starting ULTRA-SMOOTH Ambient Lighting...")
+                print("Maximum FPS for the smoothest experience!")
+                print("Warning: This will use more CPU and BLE bandwidth")
+                await self.lamp.start_ultra_smooth_ambient()
+
+            elif choice == "13":
                 await self.disconnect_led()
 
             else:

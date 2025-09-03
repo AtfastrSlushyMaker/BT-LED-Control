@@ -10,6 +10,9 @@ This project is an open-source alternative to the official *Magic Lantern* app, 
 - 🔗 **Easy BLE Connection** - Automatic device discovery and connection
 - 🎨 **Full Color Control** - Set any RGB color (0-255 values)
 - 🌈 **Preset Colors** - Red, Green, Blue, White, Purple, Orange, Yellow, Cyan
+- 🖥️ **Ambient Screen Lighting** - Real-time screen color matching with advanced color enhancement
+- ⚡ **High-Performance** - 120+ FPS ambient lighting with ultra-smooth updates
+- 🎯 **Smart Color Enhancement** - Intelligent saturation boost while preserving natural color mixes
 - ⚡ **Simple API** - Clean, async Python interface
 - 🎮 **Interactive Menu** - Command-line interface for manual control
 - 🔧 **Extensible** - Easy to add new features and effects
@@ -122,6 +125,62 @@ asyncio.run(color_cycle())
 
 ---
 
+## 🖥️ Ambient Screen Lighting
+
+Experience immersive lighting that matches your screen content in real-time!
+
+### Quick Start
+
+Use the interactive menu for the easiest setup:
+
+```bash
+python led_menu.py
+# Select option 11 for 120 FPS ambient lighting
+# Select option 12 for ultra-smooth unlimited FPS mode
+# Press 'Q' to exit ambient lighting
+```
+
+### API Usage
+
+```python
+import asyncio
+from bt_led_control.device import LT22Lamp
+
+async def ambient_lighting():
+    lamp = LT22Lamp()
+    await lamp.connect()
+    
+    # Start 120 FPS ambient lighting
+    await lamp.start_ambient_lighting(fps=120)
+    
+    # Or start ultra-smooth mode (unlimited FPS)
+    await lamp.start_ultra_smooth_ambient()
+    
+    await lamp.disconnect()
+
+asyncio.run(ambient_lighting())
+```
+
+### Features
+
+- **🚀 High Performance**: 120+ FPS for ultra-smooth color transitions
+- **🎨 Smart Color Enhancement**: Intelligently boosts washed-out colors while preserving natural mixes
+- **🖱️ Easy Control**: Press 'Q' key to exit ambient mode
+- **⚡ Optimized Capture**: Fast screen sampling with edge detection for better color accuracy
+- **🎯 Color Accuracy**: Special handling for whites, cyans, yellows, and magentas
+
+### How It Works
+
+1. **Screen Capture**: Captures your screen at high speed with optimized resolution
+2. **Color Analysis**: Samples screen edges and calculates average color
+3. **Smart Enhancement**: Applies intelligent saturation boost:
+   - Preserves natural color combinations (white, cyan, yellow, magenta)
+   - Enhances single-color dominance for vivid ambient lighting
+   - Maintains color accuracy for mixed content
+4. **LED Update**: Sends color commands to your LED strip in real-time
+
+---
+
 ## 🛠️ API Reference
 
 ### LT22Lamp Class
@@ -136,6 +195,8 @@ asyncio.run(color_cycle())
 | `turn_blue()` | Turn LED blue | `bool` - Success status |
 | `turn_white()` | Turn LED white | `bool` - Success status |
 | `turn_off()` | Turn LED off | `bool` - Success status |
+| `start_ambient_lighting(fps=120)` | Start screen-matching ambient lighting | `None` |
+| `start_ultra_smooth_ambient()` | Start unlimited FPS ambient lighting | `None` |
 
 ---
 
@@ -147,7 +208,8 @@ BT-LED-Control/
 │   ├── __init__.py         # Package initialization & exports
 │   ├── bluetooth.py         # BLE connection management
 │   ├── commands.py          # LED command protocols
-│   ├── device.py           # High-level device interface
+│   ├── device.py           # High-level device interface (includes ambient lighting)
+│   ├── screen_capture.py   # Screen color capture and analysis
 │   └── utils.py            # Utility functions
 ├── led_menu.py             # Interactive control menu
 ├── requirements.txt        # Project dependencies
@@ -172,7 +234,13 @@ BT-LED-Control/
 - **Python**: 3.8+
 - **OS**: Windows, macOS, Linux
 - **Hardware**: Bluetooth adapter
-- **Dependencies**: `bleak`, `asyncio`
+- **Dependencies**: `bleak`, `asyncio`, `Pillow` (PIL), `numpy`, `msvcrt` (Windows)
+
+**For Ambient Lighting:**
+
+- Screen access permissions may be required on some systems
+- Windows: Built-in screen capture support
+- macOS/Linux: May require additional permissions for screen access
 
 ---
 
@@ -180,9 +248,34 @@ BT-LED-Control/
 
 ### Example Scripts
 
-Check out the main example file:
+Check out these example files:
 
-- `led_menu.py` - Interactive command-line interface with all features
+- `led_menu.py` - Interactive command-line interface with all features including ambient lighting
+- `color_debug_test.py` - Color testing and debugging utilities
+
+### Ambient Lighting Example
+
+```python
+import asyncio
+from bt_led_control.device import LT22Lamp
+
+async def smart_ambient_lighting():
+    """Example of ambient lighting with custom settings."""
+    lamp = LT22Lamp()
+    
+    if await lamp.connect():
+        print("🚀 Starting ambient lighting!")
+        print("Press 'Q' to exit")
+        
+        # Start high-performance ambient lighting
+        await lamp.start_ambient_lighting(fps=120)
+        
+        await lamp.disconnect()
+    else:
+        print("❌ Could not connect to LED")
+
+asyncio.run(smart_ambient_lighting())
+```
 
 ### Create Your Own Script
 
@@ -216,6 +309,9 @@ Contributions welcome! Areas for improvement:
 - Brightness control
 - Timer functions
 - GUI interface
+- Multi-zone ambient lighting
+- Custom screen capture regions
+- Audio-reactive lighting modes
 
 ---
 
@@ -251,6 +347,27 @@ This project is open source. Feel free to use, modify, and distribute.
    ```
 
 3. Update the device address if needed
+
+### Ambient Lighting Issues
+
+1. **Screen capture not working:**
+   - On Windows: May require running as administrator
+   - On macOS: Grant screen recording permissions in System Preferences > Security & Privacy
+   - On Linux: Ensure X11 or Wayland screen access
+
+2. **Performance issues:**
+   - Lower FPS if experiencing lag: `await lamp.start_ambient_lighting(fps=60)`
+   - Close unnecessary applications to free up system resources
+   - Ensure stable Bluetooth connection
+
+3. **Colors appear washed out:**
+   - The system automatically enhances colors for better ambient lighting
+   - Colors are preserved for natural mixes (whites, cyans, yellows)
+   - Single-color dominance is enhanced for vivid lighting
+
+4. **Exit ambient lighting:**
+   - Press the 'Q' key to gracefully exit ambient mode
+   - The LED will retain the last color displayed
 
 ---
 
