@@ -119,6 +119,49 @@ class LT22Lamp:
         command = white()
         return await self.ble.send_command(command)
 
+    def list_monitors(self):
+        """List available monitors for selection."""
+        from .screen_capture import display_available_monitors
+
+        return display_available_monitors()
+
+    def choose_monitor_interactive(self) -> int:
+        """Interactive monitor selection for ambient lighting."""
+        monitors = self.list_monitors()
+
+        if len(monitors) == 1:
+            print(f"Using only available monitor: {monitors[0]['name']}")
+            return 0
+
+        while True:
+            try:
+                choice = (
+                    input(
+                        f"\nChoose monitor for ambient lighting (0-{len(monitors)-1}, or 'c' to cancel): "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                if choice == "c":
+                    return None
+
+                monitor_id = int(choice)
+                if 0 <= monitor_id < len(monitors):
+                    selected = monitors[monitor_id]
+                    print(
+                        f"✅ Selected: {selected['name']} ({selected['width']}x{selected['height']})"
+                    )
+                    return monitor_id
+                else:
+                    print(f"❌ Invalid choice. Please enter 0-{len(monitors)-1}")
+
+            except ValueError:
+                print("❌ Please enter a valid number or 'c' to cancel")
+            except KeyboardInterrupt:
+                print("\n❌ Cancelled")
+                return None
+
     async def turn_off(self) -> bool:
         command = off()
         return await self.ble.send_command(command)
@@ -129,6 +172,7 @@ class LT22Lamp:
         edge_width: int = 100,
         smoothing: float = 0.0,
         brightness_boost: int = 30,
+        monitor_id: int = None,
     ):
         """Start ambient lighting that matches screen colors.
 
@@ -137,12 +181,15 @@ class LT22Lamp:
             edge_width: Pixels from screen edge to sample
             smoothing: Color transition smoothing (0.0=instant, 1.0=gradual)
             brightness_boost: Minimum brightness level (0-255) to keep LED visible
+            monitor_id: Which monitor to capture (None for primary, 0,1,2... for specific)
         """
         print(f"Starting ambient lighting at {fps} FPS (ULTRA-RESPONSIVE MODE)...")
         print(f"Brightness boost: {brightness_boost} + COLOR SATURATION BOOST")
         print("Press 'END' key to stop and return to menu")
 
-        capture = ScreenColorCapture(edge_width=edge_width, smoothing_factor=smoothing)
+        capture = ScreenColorCapture(
+            edge_width=edge_width, smoothing_factor=smoothing, monitor_id=monitor_id
+        )
         capture.set_edge_sampling(False)  # Full screen for better color detection
         delay = 1.0 / fps
 
@@ -173,14 +220,21 @@ class LT22Lamp:
         await self.turn_off()
         return True
 
-    async def start_ultra_smooth_ambient(self, brightness_boost: int = 40):
-        """Ultra-smooth ambient lighting - maximum FPS, no smoothing, optimized capture."""
+    async def start_ultra_smooth_ambient(
+        self, brightness_boost: int = 40, monitor_id: int = None
+    ):
+        """Ultra-smooth ambient lighting - maximum FPS, no smoothing, optimized capture.
+
+        Args:
+            brightness_boost: Minimum brightness level (0-255) to keep LED visible
+            monitor_id: Which monitor to capture (None for primary, 0,1,2... for specific)
+        """
         print("Starting ULTRA-SMOOTH ambient lighting at MAXIMUM FPS...")
         print(f"Brightness boost: {brightness_boost} + MAXIMUM SATURATION BOOST")
         print("Press 'END' key to stop and return to menu")
 
         capture = ScreenColorCapture(
-            smoothing_factor=0.0
+            smoothing_factor=0.0, monitor_id=monitor_id
         )  # No smoothing = instant response
         capture.set_edge_sampling(False)
 

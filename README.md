@@ -11,6 +11,9 @@ This project is an open-source alternative to the official *Magic Lantern* app, 
 - 🎨 **Full Color Control** - Set any RGB color (0-255 values)
 - 🌈 **Preset Colors** - Red, Green, Blue, White, Purple, Orange, Yellow, Cyan
 - 🖥️ **Ambient Screen Lighting** - Real-time screen color matching with advanced color enhancement
+- 🖥️ **Multi-Monitor Support** - Choose which monitor to capture for ambient lighting
+- 🔍 **Advanced Screen Detection** - Automatic detection of all connected monitors
+- 🔧 **Win32 Integration** - Proper capture from monitors with negative coordinates
 - ⚡ **High-Performance** - 120+ FPS ambient lighting with ultra-smooth updates
 - 🎯 **Smart Color Enhancement** - Intelligent saturation boost while preserving natural color mixes
 - ⚡ **Simple API** - Clean, async Python interface
@@ -168,10 +171,28 @@ asyncio.run(ambient_lighting())
 - **🖱️ Easy Control**: Press 'END' key to exit ambient mode
 - **⚡ Optimized Capture**: Fast screen sampling with edge detection for better color accuracy
 - **🎯 Color Accuracy**: Special handling for whites, cyans, yellows, and magentas
+- **🖥️ Multi-Monitor Support**: Select any connected monitor for ambient lighting capture
+
+### Multi-Monitor Support
+
+Perfect for multi-screen setups! The system can:
+
+- **🔍 Auto-Detect**: Automatically discover all connected monitors
+- **📺 Monitor Selection**: Choose which screen to capture via menu option 13
+- **🔧 Advanced Capture**: Uses Win32 API for proper multi-monitor support
+- **🎮 Gaming Setup**: Capture from your gaming monitor while using other screens
+- **⚡ Performance**: Same high-speed capture regardless of monitor choice
+
+**Supported Configurations:**
+
+- Single monitor setups (automatic)
+- Multi-monitor with positive coordinates  
+- Multi-monitor with negative coordinates (left-positioned screens)
+- Mixed resolution setups (e.g., 4K primary + 1080p secondary)
 
 ### How It Works
 
-1. **Screen Capture**: Captures your screen at high speed with optimized resolution
+1. **Screen Capture**: Captures your selected screen at high speed with optimized resolution
 2. **Color Analysis**: Samples screen edges and calculates average color
 3. **Smart Enhancement**: Applies intelligent saturation boost:
    - Preserves natural color combinations (white, cyan, yellow, magenta)

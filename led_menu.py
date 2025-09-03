@@ -12,6 +12,7 @@ class LEDMenu:
     def __init__(self):
         self.lamp = LT22Lamp()
         self.connected = False
+        self.selected_monitor = None  # Track selected monitor for ambient lighting
 
     def show_menu(self):
         """Display the main menu options."""
@@ -42,9 +43,10 @@ class LEDMenu:
             print("\n✨ Special Effects:")
             print("11. Ambient Screen Lighting")
             print("12. Ultra-Smooth Ambient Lighting")
+            print("13. Select Monitor for Ambient Lighting")
 
             print("\n⚙️ Connection:")
-            print("13. Disconnect")
+            print("14. Disconnect")
             print("0. Exit")
 
         print("-" * 50)
@@ -156,16 +158,50 @@ class LEDMenu:
                 print("This will make your LED match your screen colors!")
                 print("Tip: Play a colorful video or game to see the effect")
                 print("📋 Press 'END' key to exit ambient mode")
-                await self.lamp.start_ambient_lighting()
+
+                # Use selected monitor if available
+                if (
+                    hasattr(self, "selected_monitor")
+                    and self.selected_monitor is not None
+                ):
+                    print(f"🖥️  Using selected monitor {self.selected_monitor}")
+                    await self.lamp.start_ambient_lighting(
+                        monitor_id=self.selected_monitor
+                    )
+                else:
+                    await self.lamp.start_ambient_lighting()
 
             elif choice == "12":
                 print("🚀 Starting ULTRA-SMOOTH Ambient Lighting...")
                 print("Maximum FPS for the smoothest experience!")
                 print("Warning: This will use more CPU and BLE bandwidth")
                 print("📋 Press 'END' key to exit ambient mode")
-                await self.lamp.start_ultra_smooth_ambient()
+
+                # Use selected monitor if available
+                if (
+                    hasattr(self, "selected_monitor")
+                    and self.selected_monitor is not None
+                ):
+                    print(f"🖥️  Using selected monitor {self.selected_monitor}")
+                    await self.lamp.start_ultra_smooth_ambient(
+                        monitor_id=self.selected_monitor
+                    )
+                else:
+                    await self.lamp.start_ultra_smooth_ambient()
 
             elif choice == "13":
+                print("🖥️  Monitor Selection for Ambient Lighting")
+                monitor_id = self.lamp.choose_monitor_interactive()
+                if monitor_id is not None:
+                    print(
+                        f"✅ Monitor {monitor_id} will be used for future ambient lighting"
+                    )
+                    # Store the selected monitor for future use
+                    self.selected_monitor = monitor_id
+                else:
+                    print("❌ Monitor selection cancelled")
+
+            elif choice == "14":
                 await self.disconnect_led()
 
             else:

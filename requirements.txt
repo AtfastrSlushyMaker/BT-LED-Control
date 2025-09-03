@@ -8,6 +8,7 @@ pytest-asyncio>=0.21.0
 # Screen ambient lighting dependencies
 pillow>=10.0.0
 numpy>=1.24.0
+pywin32>=306; sys_platform == "win32"  # Windows multi-monitor support
 
 # Optional: for better logging and debugging
 colorama>=0.4.6
