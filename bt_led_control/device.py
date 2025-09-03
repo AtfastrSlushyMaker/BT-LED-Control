@@ -15,11 +15,15 @@ class LT22Lamp:
         self.ble = BLEManager(device_address)
 
     def _check_for_exit_key(self):
-        """Check if user pressed Ctrl+/ to exit ambient mode."""
+        """Check if user pressed End key to exit ambient mode."""
         if msvcrt.kbhit():
             key = msvcrt.getch()
-            # Check for Ctrl+/ (ASCII 31)
-            return ord(key) == 31
+            # Handle special keys (2-byte sequences)
+            if ord(key) == 224:  # Special key prefix
+                key2 = msvcrt.getch()
+                # Check for End key (79)
+                return ord(key2) == 79
+            return False
         return False
 
     def _enhance_color_saturation(
@@ -136,7 +140,7 @@ class LT22Lamp:
         """
         print(f"Starting ambient lighting at {fps} FPS (ULTRA-RESPONSIVE MODE)...")
         print(f"Brightness boost: {brightness_boost} + COLOR SATURATION BOOST")
-        print("Press 'Ctrl+/' to stop and return to menu")
+        print("Press 'END' key to stop and return to menu")
 
         capture = ScreenColorCapture(edge_width=edge_width, smoothing_factor=smoothing)
         capture.set_edge_sampling(False)  # Full screen for better color detection
@@ -173,7 +177,7 @@ class LT22Lamp:
         """Ultra-smooth ambient lighting - maximum FPS, no smoothing, optimized capture."""
         print("Starting ULTRA-SMOOTH ambient lighting at MAXIMUM FPS...")
         print(f"Brightness boost: {brightness_boost} + MAXIMUM SATURATION BOOST")
-        print("Press 'Ctrl+/' to stop and return to menu")
+        print("Press 'END' key to stop and return to menu")
 
         capture = ScreenColorCapture(
             smoothing_factor=0.0

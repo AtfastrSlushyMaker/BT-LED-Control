@@ -155,14 +155,14 @@ class LEDMenu:
                 print("✨ Starting Ambient Screen Lighting...")
                 print("This will make your LED match your screen colors!")
                 print("Tip: Play a colorful video or game to see the effect")
-                print("📋 Press 'Ctrl+/' to exit ambient mode")
+                print("📋 Press 'END' key to exit ambient mode")
                 await self.lamp.start_ambient_lighting()
 
             elif choice == "12":
                 print("🚀 Starting ULTRA-SMOOTH Ambient Lighting...")
                 print("Maximum FPS for the smoothest experience!")
                 print("Warning: This will use more CPU and BLE bandwidth")
-                print("📋 Press 'Ctrl+/' to exit ambient mode")
+                print("📋 Press 'END' key to exit ambient mode")
                 await self.lamp.start_ultra_smooth_ambient()
 
             elif choice == "13":
