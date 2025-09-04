@@ -2,7 +2,73 @@
 
 import numpy as np
 from PIL import Image
-from typing import Tuple
+from typing import Tuple, Optional
+
+
+class ColorTransitioner:
+    """Handles smooth color transitions between frames for LED lamps."""
+
+    def __init__(self, transition_speed: float = 0.15):
+        """
+        Initialize the color transitioner.
+
+        Args:
+            transition_speed: How fast to transition (0.1 = slow, 0.3 = medium, 0.5+ = fast)
+        """
+        self.current_left = (0, 0, 0)
+        self.current_right = (0, 0, 0)
+        self.target_left = (0, 0, 0)
+        self.target_right = (0, 0, 0)
+        self.transition_speed = transition_speed
+
+    def set_targets(
+        self, left_color: Tuple[int, int, int], right_color: Tuple[int, int, int]
+    ):
+        """Set the target colors for smooth transition."""
+        self.target_left = left_color
+        self.target_right = right_color
+
+    def update_smooth_colors(self) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
+        """Update current colors towards targets with smooth interpolation."""
+        # Smooth interpolation using exponential decay for natural motion
+        self.current_left = self._interpolate_color(self.current_left, self.target_left)
+        self.current_right = self._interpolate_color(
+            self.current_right, self.target_right
+        )
+
+        return self.current_left, self.current_right
+
+    def _interpolate_color(
+        self, current: Tuple[int, int, int], target: Tuple[int, int, int]
+    ) -> Tuple[int, int, int]:
+        """Smoothly interpolate between current and target color using exponential decay."""
+        factor = self.transition_speed
+
+        r = int(current[0] + (target[0] - current[0]) * factor)
+        g = int(current[1] + (target[1] - current[1]) * factor)
+        b = int(current[2] + (target[2] - current[2]) * factor)
+
+        return (r, g, b)
+
+    def is_close_to_target(self, threshold: int = 5) -> bool:
+        """Check if current colors are close enough to targets."""
+        left_diff = sum(abs(c - t) for c, t in zip(self.current_left, self.target_left))
+        right_diff = sum(
+            abs(c - t) for c, t in zip(self.current_right, self.target_right)
+        )
+
+        return left_diff < threshold and right_diff < threshold
+
+    def reset(
+        self,
+        left_color: Tuple[int, int, int] = (0, 0, 0),
+        right_color: Tuple[int, int, int] = (0, 0, 0),
+    ):
+        """Reset the transitioner to specific colors."""
+        self.current_left = left_color
+        self.current_right = right_color
+        self.target_left = left_color
+        self.target_right = right_color
 
 
 def enhance_color_saturation(
@@ -80,21 +146,36 @@ def enhance_color_saturation(
 
 
 def smooth_color_transition(
-    current_color: Tuple[int, int, int],
+    current_color: Optional[Tuple[int, int, int]],
     target_color: Tuple[int, int, int],
     smoothing_factor: float = 0.3,
 ) -> Tuple[int, int, int]:
-    """Apply smooth transition between current and target colors."""
+    """
+    Apply smooth transition between current and target colors.
+
+    Args:
+        current_color: Current RGB color tuple (or None for first frame)
+        target_color: Target RGB color tuple
+        smoothing_factor: Transition speed (0.1 = slow, 0.5 = fast)
+
+    Returns:
+        New RGB color tuple transitioning towards target
+    """
     if current_color is None:
         return target_color
 
     cr, cg, cb = current_color
     tr, tg, tb = target_color
 
-    # Linear interpolation with smoothing factor
+    # Exponential decay interpolation for natural motion
     new_r = int(cr + (tr - cr) * smoothing_factor)
     new_g = int(cg + (tg - cg) * smoothing_factor)
     new_b = int(cb + (tb - cb) * smoothing_factor)
+
+    # Ensure values stay in valid range
+    new_r = max(0, min(255, new_r))
+    new_g = max(0, min(255, new_g))
+    new_b = max(0, min(255, new_b))
 
     return (new_r, new_g, new_b)
 

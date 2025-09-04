@@ -4,7 +4,11 @@ import asyncio
 from typing import Tuple, Optional, Dict, Any
 from .device import LT22Lamp
 from .screen_capture import get_screen_edge_color
-from .color_utils import enhance_color_saturation, get_edge_colors_from_image
+from .color_utils import (
+    enhance_color_saturation,
+    get_edge_colors_from_image,
+    ColorTransitioner,
+)
 from .utils import check_for_exit_key
 from .monitor import get_available_monitors, get_monitor_with_scaling_info
 from PIL import ImageGrab
@@ -22,6 +26,9 @@ class DualLampManager:
         self.left_lamp = LT22Lamp(self.LEFT_LAMP_ADDRESS)
         self.right_lamp = LT22Lamp(self.RIGHT_LAMP_ADDRESS)
         self.connected = {"left": False, "right": False}
+        self.color_transitioner = ColorTransitioner(
+            transition_speed=0.2
+        )  # Smooth transitions
 
     async def connect_both(self) -> Dict[str, bool]:
         """Connect to both lamps with retry logic."""
@@ -76,6 +83,17 @@ class DualLampManager:
         print("👋 Dual-lamp setup disconnected!")
         return results
 
+    def set_transition_speed(self, speed: float):
+        """
+        Set the color transition smoothness.
+
+        Args:
+            speed: Transition speed (0.1 = very smooth/slow, 0.5 = fast, 1.0 = instant)
+        """
+        speed = max(0.01, min(1.0, speed))  # Clamp between 0.01 and 1.0
+        self.color_transitioner.transition_speed = speed
+        print(f"🌊 Color transition speed set to {speed:.2f}")
+
     async def set_both_color(self, red: int, green: int, blue: int) -> Dict[str, bool]:
         """Set both lamps to the same color."""
         results = {}
@@ -96,26 +114,52 @@ class DualLampManager:
             self.connected["right"] = self.right_lamp.ble.is_connected()
 
     async def set_left_color(self, red: int, green: int, blue: int) -> bool:
-        """Set only the left lamp color."""
-        if self.connected["left"]:
-            try:
-                result = await self.left_lamp.set_color(red, green, blue)
-                return result
-            except Exception as e:
-                print(f"Left lamp error: {e}")
-                return False
-        return False
+        """Set only the left lamp color with detailed diagnostics."""
+        if not self.connected["left"]:
+            return False
+
+        try:
+            result = await self.left_lamp.set_color(red, green, blue)
+            if not result:
+                # Check if the connection is still valid
+                if (
+                    hasattr(self.left_lamp.ble, "is_connected")
+                    and not self.left_lamp.ble.is_connected()
+                ):
+                    print("❌ Left lamp disconnected during color update")
+                    self.connected["left"] = False
+                else:
+                    print(f"⚠️ Left lamp color update failed but connection seems OK")
+            return result
+        except Exception as e:
+            print(f"❌ Left lamp exception: {e}")
+            # Mark as disconnected on exception
+            self.connected["left"] = False
+            return False
 
     async def set_right_color(self, red: int, green: int, blue: int) -> bool:
-        """Set only the right lamp color."""
-        if self.connected["right"]:
-            try:
-                result = await self.right_lamp.set_color(red, green, blue)
-                return result
-            except Exception as e:
-                print(f"Right lamp error: {e}")
-                return False
-        return False
+        """Set only the right lamp color with detailed diagnostics."""
+        if not self.connected["right"]:
+            return False
+
+        try:
+            result = await self.right_lamp.set_color(red, green, blue)
+            if not result:
+                # Check if the connection is still valid
+                if (
+                    hasattr(self.right_lamp.ble, "is_connected")
+                    and not self.right_lamp.ble.is_connected()
+                ):
+                    print("❌ Right lamp disconnected during color update")
+                    self.connected["right"] = False
+                else:
+                    print(f"⚠️ Right lamp color update failed but connection seems OK")
+            return result
+        except Exception as e:
+            print(f"❌ Right lamp exception: {e}")
+            # Mark as disconnected on exception
+            self.connected["right"] = False
+            return False
 
     async def turn_off_both(self) -> Dict[str, bool]:
         """Turn off both lamps."""
@@ -259,9 +303,13 @@ class DualLampManager:
             f"   FPS: {fps} | Brightness: +{brightness_boost} | Saturation: {saturation_factor}x"
         )
         print("   Left lamp = Left screen zone | Right lamp = Right screen zone")
+        print("   🌊 Smooth color transitions enabled")
         print("   Press 'END' key to stop")
 
         delay = 1.0 / fps
+
+        # Reset color transitioner for fresh start
+        self.color_transitioner.reset()
 
         try:
             while True:
@@ -270,26 +318,54 @@ class DualLampManager:
                     break
 
                 # Capture and process screen zones
-                left_color, right_color = self._capture_screen_with_zones(monitor_id)
+                raw_left_color, raw_right_color = self._capture_screen_with_zones(
+                    monitor_id
+                )
 
                 # Apply brightness boost (more gentle approach)
-                left_color = tuple(min(255, c + brightness_boost) for c in left_color)
-                right_color = tuple(min(255, c + brightness_boost) for c in right_color)
+                target_left = tuple(
+                    min(255, c + brightness_boost) for c in raw_left_color
+                )
+                target_right = tuple(
+                    min(255, c + brightness_boost) for c in raw_right_color
+                )
 
                 # Apply saturation enhancement
-                left_color = enhance_color_saturation(*left_color, saturation_factor)
-                right_color = enhance_color_saturation(*right_color, saturation_factor)
+                target_left = enhance_color_saturation(*target_left, saturation_factor)
+                target_right = enhance_color_saturation(
+                    *target_right, saturation_factor
+                )
 
-                # Send colors to respective lamps
-                tasks = []
+                # Set target colors for smooth transition
+                self.color_transitioner.set_targets(target_left, target_right)
+
+                # Get smoothly transitioned colors
+                left_color, right_color = self.color_transitioner.update_smooth_colors()
+
+                # Send colors to respective lamps with detailed diagnostics
+                left_success = None
+                right_success = None
+
                 if self.connected["left"]:
-                    tasks.append(self.set_left_color(*left_color))
-                if self.connected["right"]:
-                    tasks.append(self.set_right_color(*right_color))
+                    left_success = await self.set_left_color(*left_color)
+                    if not left_success:
+                        print(f"⚠️ Left lamp failed to update: {left_color}")
 
-                # Execute both lamp updates simultaneously
-                if tasks:
-                    await asyncio.gather(*tasks)
+                if self.connected["right"]:
+                    right_success = await self.set_right_color(*right_color)
+                    if not right_success:
+                        print(f"⚠️ Right lamp failed to update: {right_color}")
+
+                # Debug output every 60 frames (once per second at 60 FPS)
+                if hasattr(self, "_debug_counter"):
+                    self._debug_counter += 1
+                else:
+                    self._debug_counter = 0
+
+                if self._debug_counter % 60 == 0:
+                    print(
+                        f"🔍 Status: Left={left_success}, Right={right_success} | Colors: L{left_color} R{right_color}"
+                    )
 
                 # Frame rate control
                 await asyncio.sleep(max(0.001, delay))

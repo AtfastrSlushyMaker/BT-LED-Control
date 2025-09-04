@@ -95,9 +95,11 @@ class LEDMenu:
             print("12. Select Monitor for Ambilight")
             print("13. Test Both Lamps")
 
-            print("\n⚙️ Connection:")
-            print("14. Reconnect Lamps")
-            print("15. Disconnect Dual Setup")
+            print("\n⚙️ Settings & Connection:")
+            print("14. 🌊 Adjust Color Transition Smoothness")
+            print("15. Reconnect Lamps")
+            print("16. 🔧 Diagnose Lamp Issues")
+            print("17. Disconnect Dual Setup")
             print("0. Exit")
 
         print("-" * 60)
@@ -129,6 +131,151 @@ class LEDMenu:
         print("🔌 Disconnecting dual setup...")
         await self.dual_lamps.disconnect_both()
         self.dual_connected = False
+
+    async def diagnose_lamp_issues(self):
+        """Diagnose connection and communication issues with lamps."""
+        if not self.dual_lamps:
+            print("❌ Dual lamp system not initialized")
+            return
+
+        print("🔧 Starting lamp diagnostics...")
+        print("-" * 50)
+
+        # Check current connection status
+        print("📡 Connection Status:")
+        left_connected = self.dual_lamps.connected["left"]
+        right_connected = self.dual_lamps.connected["right"]
+        print(
+            f"   Left Lamp:  {'✅ Connected' if left_connected else '❌ Disconnected'}"
+        )
+        print(
+            f"   Right Lamp: {'✅ Connected' if right_connected else '❌ Disconnected'}"
+        )
+
+        if not (left_connected or right_connected):
+            print("⚠️ Both lamps disconnected. Try reconnecting first.")
+            return
+
+        # Test individual lamp responses
+        print("\n🧪 Testing Individual Lamp Responses:")
+
+        test_colors = [
+            ("Red", 255, 0, 0),
+            ("Green", 0, 255, 0),
+            ("Blue", 0, 0, 255),
+        ]
+
+        for color_name, r, g, b in test_colors:
+            print(f"\n   Testing {color_name}...")
+
+            if left_connected:
+                try:
+                    left_result = await self.dual_lamps.set_left_color(r, g, b)
+                    print(
+                        f"   Left Lamp {color_name}: {'✅ Success' if left_result else '❌ Failed'}"
+                    )
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"   Left Lamp {color_name}: ❌ Exception: {e}")
+
+            if right_connected:
+                try:
+                    right_result = await self.dual_lamps.set_right_color(r, g, b)
+                    print(
+                        f"   Right Lamp {color_name}: {'✅ Success' if right_result else '❌ Failed'}"
+                    )
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"   Right Lamp {color_name}: ❌ Exception: {e}")
+
+        # Check BLE connection health
+        print("\n🔍 BLE Connection Health:")
+        try:
+            if left_connected and hasattr(
+                self.dual_lamps.left_lamp.ble, "is_connected"
+            ):
+                ble_left = self.dual_lamps.left_lamp.ble.is_connected()
+                print(
+                    f"   Left BLE Status: {'✅ Active' if ble_left else '❌ Inactive'}"
+                )
+                if not ble_left:
+                    print("   ⚠️ Left lamp marked connected but BLE shows inactive!")
+
+        except Exception as e:
+            print(f"   Left BLE Check: ❌ Error: {e}")
+
+        try:
+            if right_connected and hasattr(
+                self.dual_lamps.right_lamp.ble, "is_connected"
+            ):
+                ble_right = self.dual_lamps.right_lamp.ble.is_connected()
+                print(
+                    f"   Right BLE Status: {'✅ Active' if ble_right else '❌ Inactive'}"
+                )
+                if not ble_right:
+                    print("   ⚠️ Right lamp marked connected but BLE shows inactive!")
+
+        except Exception as e:
+            print(f"   Right BLE Check: ❌ Error: {e}")
+
+        # Recommendations
+        print("\n💡 Recommendations:")
+        if not left_connected and not right_connected:
+            print("   • Use option 14 to reconnect both lamps")
+        elif not left_connected or not right_connected:
+            print("   • Use option 14 to reconnect the disconnected lamp")
+            print("   • Check power to the problematic lamp")
+            print("   • If using USB hub, try connecting directly to TV USB port")
+        else:
+            print("   • Both lamps appear connected")
+            print(
+                "   • If one lamp gets stuck, it may be a power or interference issue"
+            )
+            print("   • Try using the 30 FPS power-saving mode")
+
+        print("-" * 50)
+
+    def adjust_transition_smoothness(self):
+        """Allow user to adjust color transition smoothness."""
+        print("🌊 Color Transition Smoothness Settings")
+        print("-" * 40)
+        print(
+            "Current setting: {:.2f}".format(
+                self.dual_lamps.color_transitioner.transition_speed
+            )
+        )
+        print("\nPresets:")
+        print("1. 🐢 Very Smooth (0.10) - Slow, buttery transitions")
+        print("2. 🌊 Smooth (0.15) - Gentle, natural transitions")
+        print("3. ⚡ Balanced (0.25) - Good speed with smoothness")
+        print("4. 🚀 Fast (0.40) - Quick response")
+        print("5. ⚡ Instant (1.00) - No smoothing")
+        print("6. 🎛️ Custom Value")
+
+        try:
+            choice = input("\nChoose setting (1-6): ").strip()
+
+            speed_map = {"1": 0.10, "2": 0.15, "3": 0.25, "4": 0.40, "5": 1.00}
+
+            if choice in speed_map:
+                speed = speed_map[choice]
+                self.dual_lamps.set_transition_speed(speed)
+                print(f"✅ Transition speed set to {speed:.2f}")
+            elif choice == "6":
+                try:
+                    speed = float(input("Enter custom speed (0.01-1.00): "))
+                    if 0.01 <= speed <= 1.0:
+                        self.dual_lamps.set_transition_speed(speed)
+                        print(f"✅ Custom transition speed set to {speed:.2f}")
+                    else:
+                        print("❌ Speed must be between 0.01 and 1.00")
+                except ValueError:
+                    print("❌ Invalid number format")
+            else:
+                print("❌ Invalid choice")
+
+        except Exception as e:
+            print(f"❌ Error adjusting smoothness: {e}")
 
     def get_custom_rgb(self):
         """Get RGB values from user input."""
@@ -414,6 +561,10 @@ class LEDMenu:
                 await self.dual_lamps.test_lamps()
 
             elif choice == "14":
+                print("🌊 Adjusting color transition smoothness...")
+                self.adjust_transition_smoothness()
+
+            elif choice == "15":
                 print("🔄 Reconnecting both lamps...")
                 if self.dual_lamps:
                     success = await self.dual_lamps.reconnect_both()
@@ -423,6 +574,13 @@ class LEDMenu:
                         print("❌ Failed to reconnect one or both lamps")
                 else:
                     print("❌ Dual lamp system not initialized")
+
+            elif choice == "16":
+                print("🔧 Diagnosing lamp connection issues...")
+                await self.diagnose_lamp_issues()
+
+            elif choice == "17":
+                await self.disconnect_dual_lamps()
 
             else:
                 print("❌ Invalid choice. Please try again.")
