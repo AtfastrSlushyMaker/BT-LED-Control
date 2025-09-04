@@ -74,7 +74,7 @@ class ColorTransitioner:
 def enhance_color_saturation(
     r: int, g: int, b: int, saturation_factor: float = 1.5
 ) -> Tuple[int, int, int]:
-    """Enhance color saturation by making dominant colors more pure."""
+    """Enhance color saturation by making dominant colors more pure, with enhanced red bias."""
     # Find the dominant color and color differences
     max_val = max(r, g, b)
     min_val = min(r, g, b)
@@ -86,17 +86,21 @@ def enhance_color_saturation(
     # Calculate how "gray" or washed out the color is
     color_range = max_val - min_val
 
+    # RED BIAS: Make red detection more sensitive - treat red as dominant even when slightly lower
+    red_bias = 1.15  # 15% bias towards red
+    effective_red = r * red_bias
+
     # Detect special color combinations that should be preserved
     # Cyan: high blue + high green, low red
     if b > 200 and g > 200 and r < 100:
         return (r, g, b)  # Keep cyan as-is
 
-    # Yellow: high red + high green, low blue
-    if r > 200 and g > 200 and b < 100:
+    # Yellow: high red + high green, low blue (but reduce threshold for red)
+    if r > 180 and g > 200 and b < 100:  # Lower red threshold for yellow
         return (r, g, b)  # Keep yellow as-is
 
-    # Pink/Magenta: high red + high blue, low green
-    if r > 200 and b > 200 and g < 100:
+    # Pink/Magenta: high red + high blue, low green (enhanced red detection)
+    if r > 180 and b > 200 and g < 120:  # More lenient for red-dominant colors
         return (r, g, b)  # Keep pink as-is
 
     # If the color is already quite saturated, don't over-enhance
@@ -107,9 +111,9 @@ def enhance_color_saturation(
     if min_val > 220 and color_range < 35:
         return (r, g, b)
 
-    # Convert to HSV-like manipulation
-    # Find which color is dominant
-    if max_val == r:
+    # Convert to HSV-like manipulation with RED BIAS
+    # Find which color is dominant (with red bias applied)
+    if effective_red >= max(g, b):  # Red gets the bias advantage
         dominant = "red"
     elif max_val == g:
         dominant = "green"
@@ -119,27 +123,35 @@ def enhance_color_saturation(
     # Apply saturation enhancement
     if color_range > 20:  # Only enhance if there's some color difference
         # Calculate enhancement amount based on how much color difference exists
-        enhancement = min(saturation_factor, 1.0 + (color_range / 255.0))
+        base_enhancement = min(saturation_factor, 1.0 + (color_range / 255.0))
 
-        # Reduce non-dominant colors more aggressively
+        # RED BIAS: Apply stronger enhancement when red is dominant
         if dominant == "red":
+            enhancement = base_enhancement * 1.2  # 20% stronger red enhancement
             g = max(0, int(g / enhancement))
             b = max(0, int(b / enhancement))
         elif dominant == "green":
+            enhancement = base_enhancement
             r = max(0, int(r / enhancement))
             b = max(0, int(b / enhancement))
         else:  # blue
+            enhancement = base_enhancement
             r = max(0, int(r / enhancement))
             g = max(0, int(g / enhancement))
 
-        # Slight boost to the dominant color if it's not too bright
+        # Enhanced boost to the dominant color if it's not too bright
         if max_val < 220:
-            boost_factor = min(1.1, 1.0 + (255 - max_val) / 500.0)
             if dominant == "red":
+                # RED BIAS: Give red colors a stronger boost
+                boost_factor = min(
+                    1.25, 1.0 + (255 - max_val) / 400.0
+                )  # Stronger boost for red
                 r = min(255, int(r * boost_factor))
             elif dominant == "green":
+                boost_factor = min(1.1, 1.0 + (255 - max_val) / 500.0)
                 g = min(255, int(g * boost_factor))
             else:  # blue
+                boost_factor = min(1.1, 1.0 + (255 - max_val) / 500.0)
                 b = min(255, int(b * boost_factor))
 
     return (r, g, b)
