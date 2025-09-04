@@ -31,6 +31,7 @@ except ImportError:
 try:
     from .device import LT22Lamp
     from .bluetooth import BLEManager
+    from .dual_lamp import DualLampManager
 except ImportError:
     # BLE dependencies not available
     pass

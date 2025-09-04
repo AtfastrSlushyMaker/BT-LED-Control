@@ -367,7 +367,7 @@ class ScreenColorCapture:
         """Set which monitor to capture from."""
         try:
             from .monitor import get_available_monitors
-            
+
             monitors = get_available_monitors()
             if 0 <= monitor_id < len(monitors):
                 self.monitor_id = monitor_id
@@ -390,7 +390,7 @@ class ScreenColorCapture:
         """Get information about the currently selected monitor."""
         if self.monitor_id is not None:
             from .monitor import get_available_monitors
-            
+
             monitors = get_available_monitors()
             if 0 <= self.monitor_id < len(monitors):
                 return monitors[self.monitor_id]
@@ -400,7 +400,7 @@ class ScreenColorCapture:
         """Get the next smoothed color from screen capture."""
         try:
             from .color_utils import smooth_color_transition
-            
+
             if self.use_edge_sampling:
                 raw_color = get_screen_edge_color(
                     self.edge_width, self.monitor_bbox, self.monitor_id

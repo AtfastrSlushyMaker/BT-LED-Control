@@ -5,7 +5,9 @@ from PIL import Image
 from typing import Tuple
 
 
-def enhance_color_saturation(r: int, g: int, b: int, saturation_factor: float = 1.5) -> Tuple[int, int, int]:
+def enhance_color_saturation(
+    r: int, g: int, b: int, saturation_factor: float = 1.5
+) -> Tuple[int, int, int]:
     """Enhance color saturation by making dominant colors more pure."""
     # Find the dominant color and color differences
     max_val = max(r, g, b)
@@ -97,10 +99,12 @@ def smooth_color_transition(
     return (new_r, new_g, new_b)
 
 
-def get_edge_colors_from_image(img, edge: str, sample_size: int = 50) -> Tuple[int, int, int]:
+def get_edge_colors_from_image(
+    img, edge: str, sample_size: int = 50
+) -> Tuple[int, int, int]:
     """Extract average color from a specific edge of an image."""
     width, height = img.size
-    
+
     if edge == "left":
         crop_box = (0, 0, sample_size, height)
     elif edge == "right":
@@ -112,31 +116,33 @@ def get_edge_colors_from_image(img, edge: str, sample_size: int = 50) -> Tuple[i
     else:
         # Full screen fallback
         crop_box = (0, 0, width, height)
-    
+
     # Crop and get average color
     edge_img = img.crop(crop_box)
     edge_array = np.array(edge_img)
-    
+
     # Calculate average RGB
     avg_color = edge_array.mean(axis=(0, 1))
-    
+
     return tuple(int(c) for c in avg_color)
 
 
-def calculate_screen_average_color(img, sample_ratio: float = 0.1) -> Tuple[int, int, int]:
+def calculate_screen_average_color(
+    img, sample_ratio: float = 0.1
+) -> Tuple[int, int, int]:
     """Calculate the average color of a screen capture with downsampling for performance."""
     # Resize image for faster processing
     original_size = img.size
     sample_width = max(50, int(original_size[0] * sample_ratio))
     sample_height = max(50, int(original_size[1] * sample_ratio))
-    
+
     # Resize with high-quality resampling
     img_small = img.resize((sample_width, sample_height), Image.Resampling.LANCZOS)
-    
+
     # Convert to numpy array for fast calculation
     img_array = np.array(img_small)
-    
+
     # Calculate average RGB
     avg_color = img_array.mean(axis=(0, 1))
-    
+
     return tuple(int(c) for c in avg_color)
