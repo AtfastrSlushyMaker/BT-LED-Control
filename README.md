@@ -1,23 +1,36 @@
 # BT-LED-Control 🎨
 
 Control **Magic Lantern LED lights** via **Bluetooth Low Energy (BLE)** directly from Python.  
-This project is an open-source alternative to the official *Magic Lantern* app, providing full programmatic control over your LED devices.
+This project is an open-source alternative to the official *Magic Lantern* app, providing full programmatic control over your LED devices with **professional dual-lamp Ambilight support**.
 
 ---
 
 ## ✨ Features
 
+### Single Lamp Control
+
 - 🔗 **Easy BLE Connection** - Automatic device discovery and connection
 - 🎨 **Full Color Control** - Set any RGB color (0-255 values)
 - 🌈 **Preset Colors** - Red, Green, Blue, White, Purple, Orange, Yellow, Cyan
 - 🖥️ **Ambient Screen Lighting** - Real-time screen color matching with advanced color enhancement
-- 🖥️ **Multi-Monitor Support** - Choose which monitor to capture for ambient lighting
-- 🔍 **Advanced Screen Detection** - Automatic detection of all connected monitors
+
+### Dual-Lamp Ambilight System
+
+- 🚀 **Dual-Lamp Setup** - Control two lamps simultaneously for left/right screen zones
+- 🎯 **Professional Ambilight** - Left lamp matches left screen zone, right lamp matches right zone
+- ⚡ **High Performance** - 60 FPS and 120 FPS ultra-smooth modes
+- 🎨 **Enhanced Color Saturation** - Vibrant 2.2x-2.5x saturation boost for immersive lighting
+- 🔄 **Intelligent Connection Management** - Automatic reconnection and robust error handling
+- 🖥️ **4K Display Support** - Full 4K capture with automatic scaling detection (100%, 150%, 200%)
+
+### Advanced Features
+
+- 🖥️ **Multi-Monitor Support** - Choose which monitor to capture for ambient lighting  
+- 🔍 **Advanced Screen Detection** - Automatic detection of all connected monitors with 4K support
 - 🔧 **Win32 Integration** - Proper capture from monitors with negative coordinates
-- ⚡ **High-Performance** - 120+ FPS ambient lighting with ultra-smooth updates
 - 🎯 **Smart Color Enhancement** - Intelligent saturation boost while preserving natural color mixes
 - ⚡ **Simple API** - Clean, async Python interface
-- 🎮 **Interactive Menu** - Command-line interface for manual control
+- 🎮 **Interactive Menu** - Command-line interface with dual-lamp mode switching
 - 🔧 **Extensible** - Easy to add new features and effects
 
 ---
@@ -57,7 +70,46 @@ Run the interactive LED control menu:
 python led_menu.py
 ```
 
-This provides a user-friendly interface with all features!
+This provides a user-friendly interface with:
+
+- **Single Lamp Mode** - Control one LED lamp with ambient lighting
+- **Dual-Lamp Mode** - Professional Ambilight with two lamps for left/right screen zones
+- **Mode Switching** - Press 'M' to switch between Single and Dual-Lamp modes
+- **Monitor Selection** - Choose which monitor to capture for ambient lighting
+- **4K Support** - Automatic detection and proper capture of 4K displays at any scaling
+
+---
+
+## 🔥 Dual-Lamp Professional Ambilight
+
+Experience true cinematic lighting with our professional dual-lamp Ambilight system!
+
+### Quick Start
+
+1. **Connect two Magic Lantern lamps** to your system
+2. **Run the menu**: `python led_menu.py`
+3. **Switch to Dual-Lamp mode**: Press 'M'
+4. **Connect both lamps**: Choose option 1
+5. **Select your monitor**: Choose option 12 (supports 4K at any scaling)
+6. **Start Ambilight**: Choose option 10 (60 FPS) or 11 (120 FPS)
+7. **Enjoy immersive lighting**: Left lamp = left screen zone, right lamp = right screen zone
+
+### Dual-Lamp Features
+
+- **🎯 Professional Zone Mapping**: Left lamp mirrors left screen zone, right lamp mirrors right zone
+- **⚡ High Performance**: 60 FPS (smooth) or 120 FPS (ultra-smooth) modes  
+- **🎨 Enhanced Saturation**: 2.2x-2.5x color boost for vibrant, cinematic lighting
+- **🖥️ 4K Display Support**: Full 4K capture at 100%, 150%, or 200% scaling
+- **🔄 Robust Connections**: Automatic reconnection and error recovery
+- **🎮 Easy Controls**: Test lamps, reconnect, monitor selection, and more
+
+### Supported Configurations
+
+- **Left Lamp**: `BE:28:72:00:37:C8` (matches left screen zone)
+- **Right Lamp**: `BE:28:72:00:39:FD` (matches right screen zone)
+- **Any Monitor**: Primary, secondary, 4K TVs, gaming monitors
+- **Any Resolution**: 1080p, 1440p, 4K, ultrawide, mixed setups
+- **Any Scaling**: 100%, 125%, 150%, 200% Windows scaling
 
 ---
 
@@ -204,7 +256,7 @@ Perfect for multi-screen setups! The system can:
 
 ## 🛠️ API Reference
 
-### LT22Lamp Class
+### Single Lamp - LT22Lamp Class
 
 | Method | Description | Returns |
 |--------|-------------|---------|
@@ -219,20 +271,38 @@ Perfect for multi-screen setups! The system can:
 | `start_ambient_lighting(fps=120)` | Start screen-matching ambient lighting | `None` |
 | `start_ultra_smooth_ambient()` | Start unlimited FPS ambient lighting | `None` |
 
+### Dual-Lamp - DualLampManager Class
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `connect_both()` | Connect to both left and right lamps | `Dict[str, bool]` |
+| `disconnect_both()` | Disconnect from both lamps | `Dict[str, bool]` |
+| `reconnect_both()` | Reconnect both lamps with retry logic | `bool` |
+| `set_both_color(r, g, b)` | Set same RGB color on both lamps | `Dict[str, bool]` |
+| `set_left_color(r, g, b)` | Set RGB color on left lamp only | `bool` |
+| `set_right_color(r, g, b)` | Set RGB color on right lamp only | `bool` |
+| `turn_off_both()` | Turn off both lamps | `Dict[str, bool]` |
+| `start_dual_ambilight(fps, brightness_boost, saturation_factor, monitor_id)` | Start professional dual-lamp Ambilight | `bool` |
+| `test_lamps()` | Test both lamps with different colors | `None` |
+
 ---
 
 ## 📁 Project Structure
 
-```
+```text
 BT-LED-Control/
 ├── bt_led_control/          # Main package
 │   ├── __init__.py         # Package initialization & exports
 │   ├── bluetooth.py         # BLE connection management
 │   ├── commands.py          # LED command protocols
-│   ├── device.py           # High-level device interface (includes ambient lighting)
-│   ├── screen_capture.py   # Screen color capture and analysis
+│   ├── device.py           # Single lamp interface (includes ambient lighting)
+│   ├── dual_lamp.py        # Dual-lamp Ambilight system
+│   ├── screen_capture.py   # Screen color capture and analysis (4K support)
+│   ├── color_utils.py      # Color enhancement and processing
+│   ├── monitor.py          # Multi-monitor detection with 4K scaling
+│   ├── ui_utils.py         # User interface utilities
 │   └── utils.py            # Utility functions
-├── led_menu.py             # Interactive control menu
+├── led_menu.py             # Interactive control menu (single & dual-lamp modes)
 ├── requirements.txt        # Project dependencies
 ├── .gitignore             # Git ignore rules
 └── README.md              # Project documentation
@@ -271,17 +341,17 @@ BT-LED-Control/
 
 Check out these example files:
 
-- `led_menu.py` - Interactive command-line interface with all features including ambient lighting
-- `color_debug_test.py` - Color testing and debugging utilities
+- `led_menu.py` - Interactive command-line interface with single and dual-lamp modes, full Ambilight support
+- `debug_ambilight.py` - Dual-lamp color testing and debugging utilities
 
-### Ambient Lighting Example
+### Single Lamp Ambient Lighting
 
 ```python
 import asyncio
 from bt_led_control.device import LT22Lamp
 
 async def smart_ambient_lighting():
-    """Example of ambient lighting with custom settings."""
+    """Example of single lamp ambient lighting with custom settings."""
     lamp = LT22Lamp()
     
     if await lamp.connect():
@@ -296,6 +366,68 @@ async def smart_ambient_lighting():
         print("❌ Could not connect to LED")
 
 asyncio.run(smart_ambient_lighting())
+```
+
+### Dual-Lamp Professional Ambilight
+
+```python
+import asyncio
+from bt_led_control.dual_lamp import DualLampManager
+
+async def professional_ambilight():
+    """Example of dual-lamp Ambilight system."""
+    dual_lamps = DualLampManager()
+    
+    # Connect to both lamps
+    connections = await dual_lamps.connect_both()
+    
+    if connections["left"] and connections["right"]:
+        print("🔥 Starting Professional Dual-Lamp Ambilight!")
+        print("Left lamp = left screen zone | Right lamp = right screen zone")
+        print("Press 'END' key to exit")
+        
+        # Start professional Ambilight (60 FPS, enhanced saturation)
+        await dual_lamps.start_dual_ambilight(
+            fps=60,
+            brightness_boost=25,
+            saturation_factor=2.2,
+            monitor_id=0  # Use primary monitor
+        )
+        
+        await dual_lamps.disconnect_both()
+    else:
+        print("❌ Could not connect to both lamps")
+        print(f"Left: {'✅' if connections['left'] else '❌'}")
+        print(f"Right: {'✅' if connections['right'] else '❌'}")
+
+asyncio.run(professional_ambilight())
+```
+
+### Custom Dual Colors
+
+```python
+import asyncio
+from bt_led_control.dual_lamp import DualLampManager
+
+async def custom_dual_colors():
+    """Example of setting different colors on each lamp."""
+    dual_lamps = DualLampManager()
+    
+    await dual_lamps.connect_both()
+    
+    # Set different colors
+    await dual_lamps.set_left_color(255, 0, 0)    # Red on left
+    await dual_lamps.set_right_color(0, 0, 255)   # Blue on right
+    
+    await asyncio.sleep(2)
+    
+    # Test sequence
+    await dual_lamps.test_lamps()
+    
+    await dual_lamps.turn_off_both()
+    await dual_lamps.disconnect_both()
+
+asyncio.run(custom_dual_colors())
 ```
 
 ### Create Your Own Script
@@ -325,14 +457,16 @@ asyncio.run(my_led_script())
 
 Contributions welcome! Areas for improvement:
 
-- Support for more LED models
-- Color effects (fade, flash, rainbow)
-- Brightness control
-- Timer functions
-- GUI interface
-- Multi-zone ambient lighting
+- Support for more LED models and protocols
+- Additional dual-lamp effects (synchronized patterns, color waves)
+- Brightness control per lamp
+- Timer and scheduling functions
+- GUI interface for dual-lamp setup
+- Multi-zone ambient lighting (more than 2 lamps)
 - Custom screen capture regions
 - Audio-reactive lighting modes
+- Integration with streaming software (OBS, etc.)
+- Gaming integration (match in-game events)
 
 ---
 
@@ -346,15 +480,19 @@ This project is open source. Feel free to use, modify, and distribute.
 
 ### Connection Issues
 
-1. Make sure LED device is powered on
+1. Make sure LED device(s) are powered on
 2. Ensure Bluetooth is enabled on your computer
-3. Check that device is in pairing mode
+3. Check that devices are in pairing mode
 4. Try running as administrator (Windows)
+5. For dual-lamp setup, ensure both lamps are discoverable
 
 ### Device Not Found
 
-1. Verify the device address in `bluetooth.py`
-2. Use the built-in scanner to discover available devices:
+1. Verify the device addresses in the code:
+   - Single lamp: Check `bluetooth.py`
+   - Dual-lamp: Left `BE:28:72:00:37:C8`, Right `BE:28:72:00:39:FD`
+
+2. Use the built-in device scanner:
 
    ```python
    from bt_led_control.bluetooth import BLEManager
@@ -362,33 +500,77 @@ This project is open source. Feel free to use, modify, and distribute.
    
    async def scan():
        ble = BLEManager()
-       devices = await ble.scan_for_devices(display=True)  # Shows all discovered devices
+       devices = await ble.scan_for_devices(display=True)
    
    asyncio.run(scan())
    ```
 
-3. Update the device address if needed
+3. Update device addresses if needed for your specific lamps
 
-### Ambient Lighting Issues
+### Dual-Lamp Specific Issues
 
-1. **Screen capture not working:**
+1. **Only one lamp connecting:**
+   - Check both lamps are powered and in range
+   - Verify device addresses are correct
+   - Use menu option 14 to reconnect both lamps
+   - Try the test function (option 13) to identify which lamp has issues
+
+2. **Connection lost during Ambilight:**
+   - The system includes automatic retry logic
+   - Use reconnect option if needed
+   - Ensure stable power to both lamps
+   - Check Bluetooth adapter range and interference
+
+3. **Colors not synchronized:**
+   - This is normal - left lamp shows left screen zone, right shows right zone
+   - Use "Both Red/Green/Blue" options to test synchronized colors
+   - Check monitor selection (option 12) for proper screen capture
+
+### Monitor and Display Issues
+
+1. **4K Display not detected properly:**
+   - The system auto-detects 4K scaling (100%, 150%, 200%)
+   - Only actual 4K displays are flagged as 4K
+   - Check monitor selection menu for proper resolution display
+
+2. **Screen capture not working:**
    - On Windows: May require running as administrator
    - On macOS: Grant screen recording permissions in System Preferences > Security & Privacy
    - On Linux: Ensure X11 or Wayland screen access
+   - For multiple monitors: Use monitor selection (option 12)
 
-2. **Performance issues:**
-   - Lower FPS if experiencing lag: `await lamp.start_ambient_lighting(fps=60)`
+3. **Colors appear wrong:**
+   - Check which monitor is selected for capture
+   - Ensure the correct screen content is being captured
+   - The system enhances colors for better ambient lighting effect
+   - Try different saturation levels (60 FPS vs 120 FPS modes)
+
+### Performance Issues
+
+1. **Ambient lighting lag:**
+   - Lower FPS if experiencing lag: Use 60 FPS mode instead of 120 FPS
    - Close unnecessary applications to free up system resources
-   - Ensure stable Bluetooth connection
+   - Ensure stable Bluetooth connection to both lamps
+   - Check system resources during operation
 
-3. **Colors appear washed out:**
-   - The system automatically enhances colors for better ambient lighting
-   - Colors are preserved for natural mixes (whites, cyans, yellows)
-   - Single-color dominance is enhanced for vivid lighting
-
-4. **Exit ambient lighting:**
+2. **Exit ambient lighting:**
    - Press 'END' key to gracefully exit ambient mode
-   - The LED will retain the last color displayed
+   - The LEDs will retain the last color displayed
+   - Use turn off options to completely disable lamps
+
+### Advanced Debugging
+
+For dual-lamp development and debugging:
+
+```python
+# Test dual-lamp screen capture
+python debug_ambilight.py
+
+# Check individual lamp connections
+from bt_led_control.dual_lamp import DualLampManager
+dual_lamps = DualLampManager()
+# ... test individual lamp methods
+```
 
 ---
 
