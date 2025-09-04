@@ -3,104 +3,10 @@
 from typing import Tuple, List, Dict, Optional
 from PIL import ImageGrab, Image
 import numpy as np
+from .monitor import get_monitor_with_scaling_info
 
 
-def get_available_monitors() -> List[Dict]:
-    """Get information about all available monitors."""
-    try:
-        import tkinter as tk
-
-        # Basic fallback monitor info
-        root = tk.Tk()
-        root.withdraw()
-        width = root.winfo_screenwidth()
-        height = root.winfo_screenheight()
-        root.destroy()
-
-        monitors = [
-            {
-                "id": 0,
-                "name": "Primary Monitor",
-                "width": width,
-                "height": height,
-                "bbox": (0, 0, width, height),
-                "primary": True,
-            }
-        ]
-
-        # Try to get detailed monitor info using Windows API
-        try:
-            import win32api
-            import win32con
-            from win32api import EnumDisplayMonitors, GetMonitorInfo
-
-            monitors.clear()
-            monitor_handles = EnumDisplayMonitors()
-
-            for i, (hmon, hdc, rect) in enumerate(monitor_handles):
-                try:
-                    monitor_info = GetMonitorInfo(hmon)
-                    device_name = monitor_info.get("Device", f"Monitor {i+1}")
-                    monitor_rect = monitor_info["Monitor"]
-                    is_primary = monitor_info["Flags"] & win32con.MONITORINFOF_PRIMARY
-
-                    monitors.append(
-                        {
-                            "id": i,
-                            "name": device_name,
-                            "width": monitor_rect[2] - monitor_rect[0],
-                            "height": monitor_rect[3] - monitor_rect[1],
-                            "bbox": monitor_rect,
-                            "primary": bool(is_primary),
-                            "device": device_name,
-                        }
-                    )
-                except Exception as e:
-                    print(f"Warning: Could not get info for monitor {i}: {e}")
-                    continue
-
-        except ImportError:
-            print("Info: Advanced multi-monitor support requires pywin32")
-            print("Install with: pip install pywin32")
-        except Exception as e:
-            print(f"Warning: Could not detect all monitors: {e}")
-
-        return monitors
-
-    except Exception as e:
-        print(f"Error detecting monitors: {e}")
-        return [
-            {
-                "id": 0,
-                "name": "Default Monitor",
-                "width": 1920,
-                "height": 1080,
-                "bbox": None,
-                "primary": True,
-            }
-        ]
-
-
-def display_available_monitors():
-    """Display all available monitors for user selection."""
-    monitors = get_available_monitors()
-
-    print("\n🖥️  Available Monitors:")
-    print("=" * 40)
-
-    for monitor in monitors:
-        primary_str = " (PRIMARY)" if monitor.get("primary", False) else ""
-        print(f"  {monitor['id']}: {monitor['name']}{primary_str}")
-        print(f"      Resolution: {monitor['width']}x{monitor['height']}")
-        if monitor.get("bbox"):
-            bbox = monitor["bbox"]
-            print(f"      Position: ({bbox[0]}, {bbox[1]}) to ({bbox[2]}, {bbox[3]})")
-        print()
-
-    return monitors
-
-
-def _capture_monitor_win32(bbox: Tuple[int, int, int, int]):
+def _capture_monitor_win32(bbox: Tuple[int, int, int, int]) -> Image.Image:
     """Capture screen using Win32 API for multi-monitor support with negative coordinates."""
     try:
         import win32gui
@@ -172,7 +78,6 @@ def _capture_4k_monitor_direct(monitor_info: Dict) -> Image.Image:
         )
 
         # Get the device context for the specific monitor
-        # For a monitor device, pass the device name as first parameter
         hdc_screen = win32gui.CreateDC(device_name, None, None)
         hdc_mem = win32ui.CreateDCFromHandle(hdc_screen)
         hdc_mem2 = hdc_mem.CreateCompatibleDC()
@@ -211,111 +116,6 @@ def _capture_4k_monitor_direct(monitor_info: Dict) -> Image.Image:
     except Exception as e:
         print(f"❌ 4K direct capture failed: {e}")
         raise e
-
-
-def get_monitor_with_scaling_info(monitor_id: int) -> Optional[Dict]:
-    """Get detailed monitor info including scaling for a specific monitor."""
-    try:
-        import win32api
-        import win32con
-
-        # Get monitor handles (returns list of tuples: (hmon, hdc, rect))
-        monitor_handles = win32api.EnumDisplayMonitors()
-
-        if monitor_id >= len(monitor_handles):
-            return None
-
-        # Get the specific monitor
-        hmon, hdc, rect = monitor_handles[monitor_id]
-        monitor_info = win32api.GetMonitorInfo(hmon)
-        device_name = monitor_info.get("Device", f"Monitor {monitor_id}")
-        monitor_rect = monitor_info["Monitor"]
-
-        # Get actual display settings
-        dm = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
-        actual_width = dm.PelsWidth
-        actual_height = dm.PelsHeight
-
-        # Calculate scaling
-        windows_width = monitor_rect[2] - monitor_rect[0]
-        windows_height = monitor_rect[3] - monitor_rect[1]
-        scaling_x = actual_width / windows_width if windows_width > 0 else 1.0
-        scaling_y = actual_height / windows_height if windows_height > 0 else 1.0
-
-        return {
-            "id": monitor_id,
-            "device_name": device_name,
-            "windows_rect": monitor_rect,
-            "actual_width": actual_width,
-            "actual_height": actual_height,
-            "scaling_x": scaling_x,
-            "scaling_y": scaling_y,
-            "is_4k": actual_width >= 3840 and actual_height >= 2160,
-            "is_scaled": scaling_x > 1.5 or scaling_y > 1.5,
-        }
-
-    except ImportError:
-        return None
-    except Exception as e:
-        print(f"Monitor info error: {e}")
-        return None
-
-
-def get_screen_average_color(
-    monitor_bbox: Optional[Tuple[int, int, int, int]] = None,
-    monitor_id: Optional[int] = None,
-) -> Tuple[int, int, int]:
-    """Capture screen and return average RGB color across entire screen or specified monitor.
-
-    Args:
-        monitor_bbox: Legacy bbox parameter for compatibility
-        monitor_id: Specific monitor ID (preferred for 4K support)
-    """
-    try:
-        # If monitor_id is provided, check if it's a scaled 4K display
-        if monitor_id is not None:
-            monitor_info = get_monitor_with_scaling_info(monitor_id)
-            if monitor_info and monitor_info["is_4k"] and monitor_info["is_scaled"]:
-                try:
-                    # Use 4K scaled capture for scaled 4K displays
-                    screenshot = _capture_4k_scaled_monitor(monitor_info)
-                except Exception as e:
-                    print(f"4K scaled capture failed, falling back: {e}")
-                    # Fall back to bbox method
-                    if monitor_bbox:
-                        screenshot = _capture_with_bbox(monitor_bbox)
-                    else:
-                        screenshot = ImageGrab.grab()
-            else:
-                # Use bbox method for non-4K or non-scaled displays
-                if monitor_bbox:
-                    screenshot = _capture_with_bbox(monitor_bbox)
-                else:
-                    screenshot = ImageGrab.grab()
-        else:
-            # Legacy behavior - use bbox if provided
-            if monitor_bbox:
-                screenshot = _capture_with_bbox(monitor_bbox)
-            else:
-                screenshot = ImageGrab.grab()
-
-        # Use moderate resize for speed while keeping color accuracy
-        screenshot = screenshot.resize((640, 360))  # Smaller but not too small
-        img_array = np.array(screenshot)
-        avg_color = np.mean(img_array, axis=(0, 1))
-        return tuple(map(int, avg_color))
-
-    except Exception as e:
-        print(f"Warning: Screen capture error: {e}")
-        # Fallback to basic capture
-        try:
-            screenshot = ImageGrab.grab()
-            screenshot = screenshot.resize((640, 360))
-            img_array = np.array(screenshot)
-            avg_color = np.mean(img_array, axis=(0, 1))
-            return tuple(map(int, avg_color))
-        except:
-            return (0, 0, 0)
 
 
 def _capture_with_bbox(monitor_bbox: Tuple[int, int, int, int]) -> Image.Image:
@@ -405,6 +205,58 @@ def _capture_4k_scaled_monitor(monitor_info: Dict) -> Image.Image:
         return _capture_with_bbox(monitor_info["windows_rect"])
 
 
+def get_screen_average_color(
+    monitor_bbox: Optional[Tuple[int, int, int, int]] = None,
+    monitor_id: Optional[int] = None,
+) -> Tuple[int, int, int]:
+    """Capture screen and return average RGB color across entire screen or specified monitor."""
+    try:
+        # If monitor_id is provided, check if it's a scaled 4K display
+        if monitor_id is not None:
+            monitor_info = get_monitor_with_scaling_info(monitor_id)
+            if monitor_info and monitor_info["is_4k"] and monitor_info["is_scaled"]:
+                try:
+                    # Use 4K scaled capture for scaled 4K displays
+                    screenshot = _capture_4k_scaled_monitor(monitor_info)
+                except Exception as e:
+                    print(f"4K scaled capture failed, falling back: {e}")
+                    # Fall back to bbox method
+                    if monitor_bbox:
+                        screenshot = _capture_with_bbox(monitor_bbox)
+                    else:
+                        screenshot = ImageGrab.grab()
+            else:
+                # Use bbox method for non-4K or non-scaled displays
+                if monitor_bbox:
+                    screenshot = _capture_with_bbox(monitor_bbox)
+                else:
+                    screenshot = ImageGrab.grab()
+        else:
+            # Legacy behavior - use bbox if provided
+            if monitor_bbox:
+                screenshot = _capture_with_bbox(monitor_bbox)
+            else:
+                screenshot = ImageGrab.grab()
+
+        # Use moderate resize for speed while keeping color accuracy
+        screenshot = screenshot.resize((640, 360))  # Smaller but not too small
+        img_array = np.array(screenshot)
+        avg_color = np.mean(img_array, axis=(0, 1))
+        return tuple(map(int, avg_color))
+
+    except Exception as e:
+        print(f"Warning: Screen capture error: {e}")
+        # Fallback to basic capture
+        try:
+            screenshot = ImageGrab.grab()
+            screenshot = screenshot.resize((640, 360))
+            img_array = np.array(screenshot)
+            avg_color = np.mean(img_array, axis=(0, 1))
+            return tuple(map(int, avg_color))
+        except:
+            return (0, 0, 0)
+
+
 def get_screen_edge_color(
     edge_width: int = 50,
     monitor_bbox: Optional[Tuple[int, int, int, int]] = None,
@@ -491,22 +343,6 @@ def get_screen_edge_color(
         return tuple(map(int, avg_color))
 
 
-def smooth_color_transition(
-    current_color: Tuple[int, int, int],
-    target_color: Tuple[int, int, int],
-    smoothing_factor: float = 0.1,
-) -> Tuple[int, int, int]:
-    """Apply smoothing between current and target colors to prevent jarring changes."""
-    r_current, g_current, b_current = current_color
-    r_target, g_target, b_target = target_color
-
-    r_smooth = int(r_current + (r_target - r_current) * smoothing_factor)
-    g_smooth = int(g_current + (g_target - g_current) * smoothing_factor)
-    b_smooth = int(b_current + (b_target - b_current) * smoothing_factor)
-
-    return (r_smooth, g_smooth, b_smooth)
-
-
 class ScreenColorCapture:
     """Class for managing continuous screen color capture with smoothing and monitor selection."""
 
@@ -530,6 +366,8 @@ class ScreenColorCapture:
     def set_monitor(self, monitor_id: int) -> bool:
         """Set which monitor to capture from."""
         try:
+            from .monitor import get_available_monitors
+            
             monitors = get_available_monitors()
             if 0 <= monitor_id < len(monitors):
                 self.monitor_id = monitor_id
@@ -551,6 +389,8 @@ class ScreenColorCapture:
     def get_monitor_info(self) -> Optional[Dict]:
         """Get information about the currently selected monitor."""
         if self.monitor_id is not None:
+            from .monitor import get_available_monitors
+            
             monitors = get_available_monitors()
             if 0 <= self.monitor_id < len(monitors):
                 return monitors[self.monitor_id]
@@ -559,6 +399,8 @@ class ScreenColorCapture:
     def get_next_color(self) -> Tuple[int, int, int]:
         """Get the next smoothed color from screen capture."""
         try:
+            from .color_utils import smooth_color_transition
+            
             if self.use_edge_sampling:
                 raw_color = get_screen_edge_color(
                     self.edge_width, self.monitor_bbox, self.monitor_id
@@ -588,7 +430,3 @@ class ScreenColorCapture:
     def set_smoothing(self, factor: float):
         """Set the smoothing factor (0.0 = very smooth, 1.0 = instant)."""
         self.smoothing_factor = max(0.0, min(1.0, factor))
-
-    def list_monitors(self) -> List[Dict]:
-        """List all available monitors."""
-        return get_available_monitors()

@@ -191,7 +191,9 @@ class LEDMenu:
 
             elif choice == "13":
                 print("🖥️  Monitor Selection for Ambient Lighting")
-                monitor_id = self.lamp.choose_monitor_interactive()
+                from bt_led_control.ui_utils import choose_monitor_interactive
+                
+                monitor_id = choose_monitor_interactive()
                 if monitor_id is not None:
                     print(
                         f"✅ Monitor {monitor_id} will be used for future ambient lighting"

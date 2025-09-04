@@ -2,10 +2,11 @@
 
 import asyncio
 import time
-import msvcrt
 from .bluetooth import BLEManager
 from .commands import rgb_command, red, green, blue, white, off
 from .screen_capture import ScreenColorCapture
+from .color_utils import enhance_color_saturation
+from .utils import check_for_exit_key
 
 
 class LT22Lamp:
@@ -13,82 +14,6 @@ class LT22Lamp:
 
     def __init__(self, device_address: str = "BE:28:72:00:39:FD"):
         self.ble = BLEManager(device_address)
-
-    def _check_for_exit_key(self):
-        """Check if user pressed End key to exit ambient mode."""
-        if msvcrt.kbhit():
-            key = msvcrt.getch()
-            # Handle special keys (2-byte sequences)
-            if ord(key) == 224:  # Special key prefix
-                key2 = msvcrt.getch()
-                # Check for End key (79)
-                return ord(key2) == 79
-            return False
-        return False
-
-    def _enhance_color_saturation(
-        self, r: int, g: int, b: int, saturation_factor: float = 1.5
-    ):
-        """Enhance color saturation by making dominant colors more pure."""
-        # Find the dominant color and color differences
-        max_val = max(r, g, b)
-        min_val = min(r, g, b)
-
-        # If the color is too dark overall, don't process it
-        if max_val < 40:
-            return (r, g, b)
-
-        # Calculate how "gray" or washed out the color is
-        color_range = max_val - min_val
-
-        # Detect special color combinations that should be preserved
-        # Cyan: high blue + high green, low red
-        if b > 200 and g > 200 and r < 100:
-            return (r, g, b)  # Keep cyan as-is
-
-        # Yellow: high red + high green, low blue
-        if r > 200 and g > 200 and b < 100:
-            return (r, g, b)  # Keep yellow as-is
-
-        # Magenta: high red + high blue, low green
-        if r > 200 and b > 200 and g < 100:
-            return (r, g, b)  # Keep magenta as-is
-
-        # White/Light gray: all channels high and similar
-        if color_range < 30:  # Very similar values = white/gray
-            boost = 1.05  # Very gentle boost for whites/grays
-            return (
-                min(255, int(r * boost)),
-                min(255, int(g * boost)),
-                min(255, int(b * boost)),
-            )
-
-        # For truly washed out single colors, enhance more
-        elif color_range > 60:  # Clear dominant color
-            if r >= g and r >= b:  # Red dominant
-                new_r = min(255, int(r * 1.1))
-                new_g = max(0, int(g * 0.6))
-                new_b = max(0, int(b * 0.6))
-                return (new_r, new_g, new_b)
-            elif g >= r and g >= b:  # Green dominant
-                new_r = max(0, int(r * 0.6))
-                new_g = min(255, int(g * 1.1))
-                new_b = max(0, int(b * 0.6))
-                return (new_r, new_g, new_b)
-            else:  # Blue dominant
-                new_r = max(0, int(r * 0.6))
-                new_g = max(0, int(g * 0.6))
-                new_b = min(255, int(b * 1.1))
-                return (new_r, new_g, new_b)
-
-        # For moderately mixed colors, gentle enhancement
-        else:
-            boost = 1.05  # Very gentle enhancement
-            return (
-                min(255, int(r * boost)),
-                min(255, int(g * boost)),
-                min(255, int(b * boost)),
-            )
 
     async def connect(self) -> bool:
         """Connect to the LED device."""
@@ -119,49 +44,6 @@ class LT22Lamp:
         command = white()
         return await self.ble.send_command(command)
 
-    def list_monitors(self):
-        """List available monitors for selection."""
-        from .screen_capture import display_available_monitors
-
-        return display_available_monitors()
-
-    def choose_monitor_interactive(self) -> int:
-        """Interactive monitor selection for ambient lighting."""
-        monitors = self.list_monitors()
-
-        if len(monitors) == 1:
-            print(f"Using only available monitor: {monitors[0]['name']}")
-            return 0
-
-        while True:
-            try:
-                choice = (
-                    input(
-                        f"\nChoose monitor for ambient lighting (0-{len(monitors)-1}, or 'c' to cancel): "
-                    )
-                    .strip()
-                    .lower()
-                )
-
-                if choice == "c":
-                    return None
-
-                monitor_id = int(choice)
-                if 0 <= monitor_id < len(monitors):
-                    selected = monitors[monitor_id]
-                    print(
-                        f"✅ Selected: {selected['name']} ({selected['width']}x{selected['height']})"
-                    )
-                    return monitor_id
-                else:
-                    print(f"❌ Invalid choice. Please enter 0-{len(monitors)-1}")
-
-            except ValueError:
-                print("❌ Please enter a valid number or 'c' to cancel")
-            except KeyboardInterrupt:
-                print("\n❌ Cancelled")
-                return None
-
     async def turn_off(self) -> bool:
         command = off()
         return await self.ble.send_command(command)
@@ -174,15 +56,7 @@ class LT22Lamp:
         brightness_boost: int = 30,
         monitor_id: int = None,
     ):
-        """Start ambient lighting that matches screen colors.
-
-        Args:
-            fps: Updates per second (higher = smoother, more CPU)
-            edge_width: Pixels from screen edge to sample
-            smoothing: Color transition smoothing (0.0=instant, 1.0=gradual)
-            brightness_boost: Minimum brightness level (0-255) to keep LED visible
-            monitor_id: Which monitor to capture (None for primary, 0,1,2... for specific)
-        """
+        """Start ambient lighting that matches screen colors."""
         print(f"Starting ambient lighting at {fps} FPS (ULTRA-RESPONSIVE MODE)...")
         print(f"Brightness boost: {brightness_boost} + COLOR SATURATION BOOST")
         print("Press 'END' key to stop and return to menu")
@@ -196,7 +70,7 @@ class LT22Lamp:
         try:
             while True:
                 # Check if user wants to exit
-                if self._check_for_exit_key():
+                if check_for_exit_key():
                     break
 
                 r, g, b = capture.get_next_color()
@@ -207,7 +81,7 @@ class LT22Lamp:
                 b = max(brightness_boost, b)
 
                 # Enhance color saturation for more vibrant colors
-                r, g, b = self._enhance_color_saturation(r, g, b, 1.8)
+                r, g, b = enhance_color_saturation(r, g, b, 1.8)
 
                 await self.set_color(r, g, b)
                 # Minimal delay for maximum speed
@@ -223,12 +97,7 @@ class LT22Lamp:
     async def start_ultra_smooth_ambient(
         self, brightness_boost: int = 40, monitor_id: int = None
     ):
-        """Ultra-smooth ambient lighting - maximum FPS, no smoothing, optimized capture.
-
-        Args:
-            brightness_boost: Minimum brightness level (0-255) to keep LED visible
-            monitor_id: Which monitor to capture (None for primary, 0,1,2... for specific)
-        """
+        """Ultra-smooth ambient lighting - maximum FPS, no smoothing, optimized capture."""
         print("Starting ULTRA-SMOOTH ambient lighting at MAXIMUM FPS...")
         print(f"Brightness boost: {brightness_boost} + MAXIMUM SATURATION BOOST")
         print("Press 'END' key to stop and return to menu")
@@ -241,7 +110,7 @@ class LT22Lamp:
         try:
             while True:
                 # Check if user wants to exit
-                if self._check_for_exit_key():
+                if check_for_exit_key():
                     break
 
                 r, g, b = capture.get_next_color()
@@ -252,7 +121,7 @@ class LT22Lamp:
                 b = max(brightness_boost, b)
 
                 # Maximum saturation boost for ultra-vibrant colors
-                r, g, b = self._enhance_color_saturation(r, g, b, 2.0)
+                r, g, b = enhance_color_saturation(r, g, b, 2.0)
 
                 await self.set_color(r, g, b)
                 # No sleep = maximum possible FPS limited only by BLE speed
